@@ -1,0 +1,14 @@
+{
+  "name": "yg-lp-black-friday",
+  "private": true,
+  "description": "LP Black Friday - Diagnóstico de Energia - YG Elétrica (Uberlândia-MG)",
+  "scripts": {
+    "build:css": "esbuild style.css --minify --outfile=style.min.css",
+    "build:js": "esbuild main.js --minify --outfile=main.min.js",
+    "build": "npm run build:css && npm run build:js",
+    "start": "python3 -m http.server 8080"
+  },
+  "devDependencies": {
+    "esbuild": "^0.28.2"
+  }
+}
