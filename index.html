@@ -25,6 +25,7 @@
 <link rel="preload" href="barlow-400-latin.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="style.min.css">
 <script src="main.min.js" defer></script>
+<style>.btn:disabled{opacity:.65;cursor:progress}</style>
 </head>
 <body>
 <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
@@ -264,6 +265,8 @@
       <div>
         <h3>Seus dados para o agendamento</h3>
         <form id="form-agenda" novalidate>
+          <div aria-hidden="true" style="position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden"><label for="empresa_site">Deixe este campo em branco</label><input id="empresa_site" name="empresa_site" type="text" tabindex="-1" autocomplete="off"></div>
+          
           <div class="f full"><label for="nome">Nome completo</label><input id="nome" name="nome" type="text" autocomplete="name" required></div>
           <div class="f"><label for="whats">WhatsApp com DDD</label><input id="whats" name="whats" type="tel" inputmode="tel" autocomplete="tel-national" placeholder="(34) 90000-0000" required></div>
           <div class="f"><label for="bairro">Bairro em Uberlândia</label><input id="bairro" name="bairro" type="text" autocomplete="address-level3" required></div>
@@ -362,5 +365,102 @@
 
 <script type="application/ld+json">{"@context": "https://schema.org", "@type": "FAQPage", "mainEntity": [{"@type": "Question", "name": "O diagnóstico vai mesmo reduzir minha conta?", "acceptedAnswer": {"@type": "Answer", "text": "O diagnóstico mostra o que está pesando na sua conta e o que deve ser feito para reduzir o gasto. A economia depende de cada imóvel e dos serviços que você realizar. No nosso case, a conta caiu de cerca de R$ 400 para menos de R$ 300."}}, {"@type": "Question", "name": "Sou obrigado a contratar o serviço depois?", "acceptedAnswer": {"@type": "Answer", "text": "Não. Depois do diagnóstico, você recebe tudo o que precisa ser feito e comprado e decide o que fazer, sem obrigação."}}, {"@type": "Question", "name": "O valor do diagnóstico é abatido se eu contratar o serviço?", "acceptedAnswer": {"@type": "Answer", "text": "Sim. Se você seguir com a YG Elétrica, o valor do diagnóstico é abatido da proposta."}}, {"@type": "Question", "name": "Quanto tempo dura a visita?", "acceptedAnswer": {"@type": "Answer", "text": "Até 1 hora. Analisamos o consumo elétrico e a estrutura da casa."}}, {"@type": "Question", "name": "O que eu recebo no final?", "acceptedAnswer": {"@type": "Answer", "text": "A descrição completa do que precisa ser feito e comprado. Se quiser que a gente execute, enviamos a proposta de implementação, com os materiais inclusos se você preferir, e agendamos o dia do serviço."}}, {"@type": "Question", "name": "Como funciona o pagamento?", "acceptedAnswer": {"@type": "Answer", "text": "Para confirmar, você paga a reserva de R$ 45 no Pix ou o valor integral no cartão. No cartão, são 3x de R$ 50 sem juros (R$ 150) ou R$ 160 em até 12x sem juros."}}, {"@type": "Question", "name": "Posso remarcar ou cancelar?", "acceptedAnswer": {"@type": "Answer", "text": "Remarcação até 4h antes do horário. Cancelamento até 24h antes, com reembolso. Fora desses prazos, o valor não é reembolsado."}}, {"@type": "Question", "name": "Os profissionais são qualificados?", "acceptedAnswer": {"@type": "Answer", "text": "Sim. Nossos profissionais são habilitados e certificados para realizar os serviços."}}, {"@type": "Question", "name": "Atendem apartamento e imóvel comercial?", "acceptedAnswer": {"@type": "Answer", "text": "Sim. Atendemos casas, apartamentos, residências e imóveis comerciais em Uberlândia-MG."}}, {"@type": "Question", "name": "Atendem à noite e no fim de semana?", "acceptedAnswer": {"@type": "Answer", "text": "Sim. Segunda e quarta, das 17h às 22h. Sábado e domingo, das 8h às 13h."}}]}</script>
 <script type="application/ld+json">{"@context": "https://schema.org", "@type": "Electrician", "name": "YG Elétrica", "description": "Instalações e manutenções elétricas residenciais, prediais e comerciais em Uberlândia-MG.", "telephone": "+55 34 98408-0127", "areaServed": {"@type": "City", "name": "Uberlândia"}, "address": {"@type": "PostalAddress", "addressLocality": "Uberlândia", "addressRegion": "MG", "addressCountry": "BR"}}</script>
+<script>
+/* Envio do formulário para o webhook do Zapier.
+   Os dados vão como formulário (x-www-form-urlencoded) com mode "no-cors": o Zapier não libera CORS,
+   então o navegador envia normalmente mas não deixa a página ler a resposta.
+   Para trocar o destino, altere WEBHOOK_URL. */
+(function () {
+  var WEBHOOK_URL = 'https://hooks.zapier.com/hooks/catch/9500058/49pymgr/';
+  var CAMPANHA = 'black-friday-diagnostico-energia';
+  var DIAS = ['domingo', 'segunda-feira', 'terça-feira', 'quarta-feira', 'quinta-feira', 'sexta-feira', 'sábado'];
+
+  function init() {
+    var form = document.getElementById('form-agenda');
+    if (!form) return;
+    var btn = form.querySelector('button[type="submit"]');
+    var err = document.getElementById('err');
+    var done = document.getElementById('done');
+    var doneWa = document.getElementById('done-wa');
+    var label = btn.textContent;
+
+    function track(name, extra) {
+      try { window.dataLayer = window.dataLayer || []; window.dataLayer.push(Object.assign({ event: name }, extra || {})); } catch (e) {}
+    }
+
+    function payload() {
+      var f = new FormData(form);
+      var p = String(f.get('data') || '').split('-');
+      var d = new Date(+p[0], +p[1] - 1, +p[2]);
+      var digits = String(f.get('whats') || '').replace(/\D/g, '');
+      var q = new URLSearchParams(location.search);
+      var out = {
+        campanha: CAMPANHA,
+        nome: String(f.get('nome') || '').trim(),
+        whatsapp: f.get('whats'),
+        whatsapp_com_55: '55' + digits,
+        bairro: String(f.get('bairro') || '').trim(),
+        tipo_imovel: f.get('imovel'),
+        faixa_conta_luz: f.get('conta'),
+        data_agendamento: p[2] + '/' + p[1] + '/' + p[0],
+        data_iso: f.get('data'),
+        dia_semana: DIAS[d.getDay()],
+        horario: f.get('hora'),
+        forma_pagamento: f.get('pgto'),
+        pagina: location.href.split('#')[0].split('?')[0],
+        referrer: document.referrer,
+        enviado_em: new Date().toISOString()
+      };
+      ['utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content', 'gclid', 'fbclid'].forEach(function (k) {
+        out[k] = q.get(k) || '';
+      });
+      return out;
+    }
+
+    // Roda depois da validação e da mensagem de confirmação do main.js.
+    form.addEventListener('submit', function () {
+      if (!form.checkValidity()) return;                       // o main.js já mostrou o erro
+      var hp = form.elements['empresa_site'];
+      if (hp && hp.value) return;                              // campo-armadilha preenchido: robô, não envia
+
+      var data = payload();
+      var body = new URLSearchParams();
+      Object.keys(data).forEach(function (k) { body.append(k, data[k] == null ? '' : data[k]); });
+
+      // A confirmação só aparece depois que o envio termina.
+      done.hidden = true;
+      err.textContent = '';
+      btn.disabled = true;
+      btn.textContent = 'Enviando...';
+
+      var ctrl = typeof AbortController === 'function' ? new AbortController() : null;
+      var timer = setTimeout(function () { if (ctrl) ctrl.abort(); }, 12000);
+
+      fetch(WEBHOOK_URL, { method: 'POST', mode: 'no-cors', body: body, keepalive: true, signal: ctrl ? ctrl.signal : undefined })
+        .then(function () {
+          clearTimeout(timer);
+          btn.textContent = 'Enviado';                         // continua desligado para não duplicar o lead
+          done.hidden = false;
+          done.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+          track('generate_lead', { form: 'diagnostico_energia' });
+        })
+        .catch(function () {
+          clearTimeout(timer);
+          btn.disabled = false;
+          btn.textContent = label;
+          err.textContent = 'Não foi possível enviar agora. Tente de novo ou confirme pelo WhatsApp: ';
+          var a = document.createElement('a');
+          a.href = doneWa.href; a.target = '_blank'; a.rel = 'noopener';
+          a.textContent = '(34) 98408-0127';
+          a.style.color = 'inherit'; a.style.textDecoration = 'underline';
+          err.appendChild(a);
+        });
+    });
+  }
+
+  // DOMContentLoaded dispara depois do main.js (defer): este envio fica registrado depois da validação.
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();
+})();
+</script>
 </body>
 </html>
